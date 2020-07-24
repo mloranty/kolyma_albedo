@@ -1,1 +1,1 @@
-# larch_albedo
+# kolyma_albedo
