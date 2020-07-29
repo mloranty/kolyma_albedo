@@ -7,37 +7,70 @@
 # MML 07/24/2020
 #################################
 
+### load required packages
 library(raster)
 library(sf)
 library(dplyr)
 
 
-# need to get canopy cover and biomass for each stand to compare with albedo data
-# read in stand data
+### set working directory
 setwd("C:/Users/mloranty/Documents/GitHub/kolyma_albedo/")
 
-dg <- read.csv("data/DensityGradientTrees_raw_2010_2017.csv", header = T)
-
-# calculate cumulative biomass for each plot
-dg.bio <- aggregate(dg$Tot.Tree.Carbon.CALC.ALLOM..g.C.m.2.~ dg$Site+dg$Plot,FUN = "sum")
-
-#change header names
-names(dg.bio) <- c("site", "plot", "biomassC")
-
-#define function to calculate standard error of the mean
+### define functions
+# standard error of the mean
 se <- function(x, ...) sqrt(var(x, ...)/length(x))
 
-# calculate mean and SE for each stand based on plot sums
-dg.tree <- aggregate(dg.bio$biomassC~dg.bio$site,FUN = "mean")
-                 
-dg.tree$se <- aggregate(dg.bio$biomassC~ dg.bio$site,FUN = "se")[,2]
+### calculate stand level biomass
+# read raw density gradient data
+dg <- read.csv("data/DensityGradientTrees_raw_2010_2017.csv", header = T)
+
+# read raw Polaris data; archived at Arctic Data Center https://arcticdata.io/catalog/view/doi:10.5065/D6NG4NP0
+pol <- read.csv("data/Polaris_TS_2012_2013_Master_trees.csv", header = T)
+  
+# calculate larch aboveground biomass using equations from Alexander et al 2012
+# divide by plot area and multiply by 0.47 to calculate g C/m2
+dg$biomassC <- ifelse(is.na(dg$BD..cm.),
+                      0.47*((179.2*dg$DBH..cm.^2.01)/dg$Area.sampled..m2.),
+                      0.47*((39.46*dg$BD..cm.^2.26)/dg$Area.sampled..m2.))
+
+pol$biomassC <- ifelse(is.na(pol$BD),
+                      0.47*((179.2*pol$DBH^2.01)/pol$Plot_area),
+                      0.47*((39.46*pol$BD^2.26)/pol$Plot_area))
+
+# sum to cumulative biomass C for each plot
+dg.plot <- aggregate(dg$biomassC~ dg$Site+dg$Plot,FUN = "sum")
+pol.plot <- aggregate(pol$biomassC~ pol$Site+pol$Trans,FUN = "sum")
+#change header names
+names(dg.plot) <- c("site", "plot", "biomassC")
+names(pol.plot) <- c("site", "plot", "biomassC")
+
+# calculate stand-level mean and SE 
+dg.site <- aggregate(dg.plot$biomassC~dg.plot$site,FUN = "mean")
+dg.site$se <- aggregate(dg.plot$biomassC~ dg.plot$site,FUN = "se")[,2]
+
+pol.site <- aggregate(pol.plot$biomassC~pol.plot$site,FUN = "mean")
+pol.site$se <- aggregate(pol.plot$biomassC~ pol.plot$site,FUN = "se")[,2]
+
+# append data sets and clean up workspace
+
+### calculate stand-level percent canopy cover from densiometer measurements
 
 
+pol.dens <- read.csv("data/Polaris_TS_2012_2013_Master_densiometer.csv", header = T)
+
+# calculate plot means
+pol.dens.plot <- aggregate(pol.dens$PctCover~pol.dens$Site+pol.dens$Trans,FUN = "mean")
+
+# calculate site means
+pol.dens.site <- aggregate(pol.dens.plot$`pol.dens$PctCover`~pol.dens.plot$`pol.dens$Site`,FUN = "mean")
+pol.dens.site$se <- aggregate(pol.dens.plot$`pol.dens$PctCover`~pol.dens.plot$`pol.dens$Site`,FUN = "se")[,2]
+# append data and clean up workspace
+
+
+### end stand data calculations
 
 # note this is manually collated from Polaris Project Data on ADC and unpublished data from H. Alexander
 tree <- read.csv("C:/Users/mloranty/Documents/GitHub/kolyma_albedo/kolyma_stand_data_FINAL.csv", header = T)
-
-
 
 
 # create spatial points
