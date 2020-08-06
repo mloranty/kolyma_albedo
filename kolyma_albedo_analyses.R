@@ -55,9 +55,8 @@ pol.site$se <- aggregate(pol.plot$biomassC~ pol.plot$site,FUN = "se")[,2]
 
 ### calculate stand-level percent canopy cover from densiometer measurements
 
-
 pol.dens <- read.csv("data/Polaris_TS_2012_2013_Master_densiometer.csv", header = T)
-
+dg.dens <- read.csv("data/Canopy Cover Density Gradient 8_1_19.csv", header = T)
 # calculate plot means
 pol.dens.plot <- aggregate(pol.dens$PctCover~pol.dens$Site+pol.dens$Trans,FUN = "mean")
 
